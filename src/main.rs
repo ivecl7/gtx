@@ -138,12 +138,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     // 参数数量检查（第一个参数是程序名）
-    if args.len() != 2 {
+    if args.len() > 2 {
         eprintln!("使用方法: {} <目录路径>", args[0]);
         std::process::exit(1);
     }
 
-    let dir_path = &args[1];
+    let dir_path = if args.len() == 1 {
+        &format!(
+            "{}/.data",
+            &match env::var("HOME") {
+                Ok(val) => val,
+                Err(e) => {
+                    eprintln!("无法获取 HOME 环境变量: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        )
+    } else {
+        &args[1]
+    };
+
     let path = Path::new(dir_path);
     let tag_index = get_global_tags();
     let date_index = get_global_dates();
