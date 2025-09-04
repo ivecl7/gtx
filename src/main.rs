@@ -245,15 +245,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let date_file = File::create(&date_path)?;
         let mut date_writer = BufWriter::new(date_file);
         writeln!(date_writer, "---\nTitle: {}\n---\n\n#list", date)?;
-        let file_list = dates.get_files_by_i(date);
-        let mut time_data: Vec<(String, String)> = Vec::new();
-        for (file_name, file_title, ltime) in file_list.unwrap_or(&Vec::new()) {
-            let anchor = format!("- [[{}|{}]]", file_name, file_title);
-            time_data.push((ltime.to_string(), anchor));
-        }
-        time_data.sort_by(|a, b| a.0.cmp(&b.0));
-        for (ltime, anchor) in time_data {
-            writeln!(date_writer, "{} {}", ltime, anchor)?;
+        let mut file_list: Vec<(String, String, String)> =
+            (*dates.get_files_by_i(date).unwrap().clone()).to_vec();
+        file_list.sort_by(|a, b| a.2.cmp(&b.2));
+        // let mut time_data: Vec<(String, String)> = Vec::new();
+        // for (file_name, file_title, ltime) in file_list.unwrap_or(&Vec::new()) {
+        //     let anchor = format!("[[{}|{}]]", file_name, file_title);
+        //     time_data.push((ltime.to_string(), anchor));
+        // }
+        // time_data.sort_by(|a, b| a.0.cmp(&b.0));
+        for (file_name, file_title, ltime) in file_list {
+            let output_line = &format!("[[{}|{}|{}]] ", file_name, ltime, file_title);
+            writeln!(date_writer, "{}", output_line)?;
         }
     }
     dates_data.sort_by(|a, b| b.0.cmp(&a.0));
