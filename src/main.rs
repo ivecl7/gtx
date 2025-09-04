@@ -28,7 +28,7 @@ impl Index {
     fn add_node(&mut self, file_name: &str, file_title: &str, extra_info: &str, input: Vec<&str>) {
         for i in input {
             // 清理i（去除前后空格，转为小写）
-            let normalized_i = i.trim().to_lowercase();
+            let normalized_i = i.trim().to_string();
 
             if !normalized_i.is_empty() {
                 // 添加到所有i集合
@@ -46,13 +46,13 @@ impl Index {
 
     // 根据i获取节点名字列表
     fn get_files_by_i(&self, i: &str) -> Option<&Vec<(String, String, String)>> {
-        let normalized_i = i.trim().to_lowercase();
+        let normalized_i = i.trim().to_string();
         self.map.get(&normalized_i)
     }
 
     // 获取i对应的节点数量
     fn get_i_count(&self, i: &str) -> usize {
-        let normalized_i = i.trim().to_lowercase();
+        let normalized_i = i.trim().to_string();
         self.map.get(&normalized_i).map_or(0, |files| files.len())
     }
 
