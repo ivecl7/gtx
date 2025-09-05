@@ -82,6 +82,17 @@ impl ColumnFormatter {
 
     fn format(&self, input: &str) -> String {
         let words: Vec<&str> = input.split_whitespace().collect();
+        let zero_width_chars: HashSet<char> = [
+            '\u{200b}', '\u{200c}', '\u{200d}', '\u{200e}', '\u{200f}', '\u{2060}', '\u{feff}',
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        let adjusted_width = |s: &str| -> usize {
+            s.chars()
+                .map(|c| if zero_width_chars.contains(&c) { 8 } else { 1 })
+                .sum()
+        };
 
         if words.is_empty() {
             return String::new();
@@ -92,7 +103,8 @@ impl ColumnFormatter {
 
         for (i, word) in words.iter().enumerate() {
             let col_index = i % self.columns_per_row;
-            col_widths[col_index] = max(col_widths[col_index], word.len());
+            let current_width = adjusted_width(word);
+            col_widths[col_index] = max(col_widths[col_index], current_width);
         }
 
         // 构建输出
@@ -101,9 +113,10 @@ impl ColumnFormatter {
 
         for (i, word) in words.iter().enumerate() {
             let col_index = i % self.columns_per_row;
-
+            let col_width = col_widths[col_index];
+            let current_width = col_width + word.len() - adjusted_width(word);
             // 格式化当前列
-            output.push_str(&format!("{:<width$}", word, width = col_widths[col_index]));
+            output.push_str(&format!("{:<width$}", word, width = current_width));
 
             // 添加列间距或换行
             if col_index < self.columns_per_row - 1 {
