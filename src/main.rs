@@ -235,7 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (tag, count) in tags_data {
         output_tags.push_str(&format!("[[{}]]({}) ", tag, count));
     }
-    let formatter = ColumnFormatter::new(5).with_padding(2);
+    let formatter = ColumnFormatter::new(4).with_padding(2);
     let result = formatter.format(&output_tags);
     writeln!(writer, "{}", result)?;
 
