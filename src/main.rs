@@ -233,7 +233,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     tags_data.sort_by(|a, b| b.1.cmp(&a.1));
     for (tag, count) in tags_data {
-        output_tags.push_str(&format!("{}({}) ", tag, count));
+        output_tags.push_str(&format!("[[{}]]({}) ", tag, count));
     }
     let formatter = ColumnFormatter::new(5).with_padding(2);
     let result = formatter.format(&output_tags);
@@ -261,12 +261,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut file_list: Vec<(String, String, String)> =
             (*dates.get_files_by_i(date).unwrap().clone()).to_vec();
         file_list.sort_by(|a, b| a.2.cmp(&b.2));
-        // let mut time_data: Vec<(String, String)> = Vec::new();
-        // for (file_name, file_title, ltime) in file_list.unwrap_or(&Vec::new()) {
-        //     let anchor = format!("[[{}|{}]]", file_name, file_title);
-        //     time_data.push((ltime.to_string(), anchor));
-        // }
-        // time_data.sort_by(|a, b| a.0.cmp(&b.0));
         for (file_name, file_title, ltime) in file_list {
             let output_line = &format!("[[{}|{}|{}]] ", file_name, ltime, file_title);
             writeln!(date_writer, "{}", output_line)?;
