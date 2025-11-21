@@ -200,8 +200,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         {
             println!("\n=== 处理文件: {} ===", file_path.display());
 
-            // 读取文件前5行
-            if let Err(e) = read_first_5_lines(&file_path) {
+            // 读取文件头
+            if let Err(e) = read_files_header(&file_path) {
                 eprintln!("读取文件失败 {}: {}", file_path.display(), e);
             }
         }
@@ -279,7 +279,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn read_first_5_lines(file_path: &Path) -> io::Result<()> {
+fn read_files_header(file_path: &Path) -> io::Result<()> {
     let file = fs::File::open(file_path)?;
     let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
     let file_name_without_ext = &file_name.strip_suffix(".md").unwrap();
@@ -289,6 +289,7 @@ fn read_first_5_lines(file_path: &Path) -> io::Result<()> {
     let tag_index = get_global_tags();
     let mut line_count = 0;
     let mut title = String::new();
+    let mut tags: Vec<String> = Vec::new();
 
     for line in reader.lines() {
         let line = line?;
@@ -339,26 +340,31 @@ fn read_first_5_lines(file_path: &Path) -> io::Result<()> {
                 .add_node(file_name_without_ext, &title, ltime, date);
         }
         if line_count == 4 && line.starts_with("Tags:") {
-            let tags: Vec<&str> = line
-                .strip_prefix("Tags:")
-                .unwrap()
-                .split_whitespace()
-                .collect();
-
-            if tags.is_empty() {
-                eprintln!("(Tags行没有标签)");
-                process::exit(1);
-            }
-
-            tag_index
-                .lock()
-                .unwrap()
-                .add_node(file_name_without_ext, &title, "", tags);
+            tags.extend(
+                line.strip_prefix("Tags:")
+                    .unwrap()
+                    .split_whitespace()
+                    .map(|s| s.to_string()),
+            );
         }
-        line_count += 1;
         if line_count >= 5 {
-            break;
+            if line.starts_with("  -") {
+                tags.push(line.strip_prefix("  -").unwrap().trim().to_string());
+            } else if line.starts_with("---") {
+                if tags.is_empty() {
+                    tags.push("NeedTag".to_string());
+                }
+                tag_index.lock().unwrap().add_node(
+                    file_name_without_ext,
+                    &title,
+                    "",
+                    tags.iter().map(|s| s.as_str()).collect(),
+                );
+                break;
+            }
         }
+
+        line_count += 1;
     }
 
     // 如果文件行数不足5行
