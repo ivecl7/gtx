@@ -82,15 +82,66 @@ impl ColumnFormatter {
 
     fn format(&self, input: &str) -> String {
         let words: Vec<&str> = input.split_whitespace().collect();
+
+        // 零宽度字符集合
         let zero_width_chars: HashSet<char> = [
             '\u{200b}', '\u{200c}', '\u{200d}', '\u{200e}', '\u{200f}', '\u{2060}', '\u{feff}',
         ]
         .iter()
         .cloned()
         .collect();
+
+        // 全角字符集合（主要是中文符号和字符）
+        let full_width_chars: HashSet<char> = [
+            '，', '。', '！', '？', '；', '：', '「', '」', '『', '』', '《', '》', '（', '）',
+            '【', '】', '｛', '｝', '［', '］', '～', '＠', '＃', '＄', '％', '＾', '＆', '＊',
+            '（', '）', '＿', '＋', '－', '＝', '｀', '｜', '、', '〃', '〄', '〇', '〆', '〒',
+            '〓', '〠', '〡', '〢', '〣', '〤', '〥', '〦', '〧', '〨', '〩', '〪', '〫', '〬', '〭', '〮',
+            '〯', '〰', '〱', '〲', '〳', '〴', '〵', '〶', '〷', '〸', '〹', '〺', '〻', '〼',
+            '〽', '〾', '〿',
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        // 中文字符范围
+        let cjk_ranges = [
+            (0x4E00, 0x9FFF),   // CJK统一表意文字
+            (0x3400, 0x4DBF),   // CJK扩展A
+            (0x20000, 0x2A6DF), // CJK扩展B
+            (0x2A700, 0x2B73F), // CJK扩展C
+            (0x2B740, 0x2B81F), // CJK扩展D
+            (0x2B820, 0x2CEAF), // CJK扩展E
+            (0x2CEB0, 0x2EBEF), // CJK扩展F
+            (0x30000, 0x3134F), // CJK扩展G
+            (0xF900, 0xFAFF),   // CJK兼容象形文字
+            (0x2F800, 0x2FA1F), // CJK兼容补充
+        ];
+
         let adjusted_width = |s: &str| -> usize {
             s.chars()
-                .map(|c| if zero_width_chars.contains(&c) { 8 } else { 1 })
+                .map(|c| {
+                    if zero_width_chars.contains(&c) {
+                        8 // 零宽度字符不计入宽度
+                    } else if c.is_ascii() {
+                        // ASCII字符宽度为1
+                        1
+                    } else if full_width_chars.contains(&c) {
+                        // 全角符号宽度为2
+                        2
+                    } else {
+                        // 检查是否在CJK范围内
+                        let code = c as u32;
+                        if cjk_ranges
+                            .iter()
+                            .any(|&(start, end)| code >= start && code <= end)
+                        {
+                            2 // 中文字符宽度为2
+                        } else {
+                            1 // 其他字符默认宽度为1
+                        }
+                    }
+                })
                 .sum()
         };
 
@@ -114,9 +165,19 @@ impl ColumnFormatter {
         for (i, word) in words.iter().enumerate() {
             let col_index = i % self.columns_per_row;
             let col_width = col_widths[col_index];
-            let current_width = col_width + word.len() - adjusted_width(word);
+            let word_display_width = adjusted_width(word);
+
             // 格式化当前列
-            output.push_str(&format!("{:<width$}", word, width = current_width));
+            output.push_str(word);
+
+            // 计算需要填充的空格数
+            let padding_needed = if col_width > word_display_width {
+                col_width - word_display_width
+            } else {
+                0
+            };
+
+            output.push_str(&" ".repeat(padding_needed));
 
             // 添加列间距或换行
             if col_index < self.columns_per_row - 1 {
@@ -127,7 +188,7 @@ impl ColumnFormatter {
         }
 
         // 确保最后有换行
-        if !output.ends_with('\n') {
+        if !output.ends_with('\n') && !words.is_empty() {
             output.push('\n');
         }
 
